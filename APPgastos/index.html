@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Gastos</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <nav class="navbar">
+        <h2>Mis Finanzas</h2>
+        <div class="nav-links">
+            <button class="nav-btn active" onclick="openTab('gastos')">Gastos</button>
+            <button class="nav-btn" onclick="openTab('finanzas')">Resumen</button>
+            <button class="nav-btn" onclick="openTab('prestamos')">Préstamos</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        
+        <section id="gastos" class="tab-content active">
+            <div class="card">
+                <h3>Nuevo Gasto</h3>
+                <form id="form-gastos">
+                    <div class="form-group">
+                        <label>Monto ($)</label>
+                        <input type="number" id="monto-gasto" required placeholder="Ej: 15000">
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría</label>
+                        <select id="categoria-gasto" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="supermercado">Supermercado/Comida</option>
+                            <option value="alquiler">Alquiler</option>
+                            <option value="caja_medica">Caja Médica</option>
+                            <option value="obra_social">Obra Social</option>
+                            <option value="expensas">Expensas</option>
+                            <option value="telefonos">Teléfonos/Internet</option>
+                            <option value="gimnasio">Gimnasio</option>
+                            <option value="transporte">Transporte/Nafta</option>
+                            <option value="ocio">Ocio/Salidas</option>
+                            <option value="otros">Otros</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Detalle</label>
+                        <input type="text" id="detalle-gasto" placeholder="Ej: Compra de la semana">
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha</label>
+                        <input type="date" id="fecha-gasto" required>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="gasto-fijo">
+                        <label for="gasto-fijo">Guardar como gasto fijo mensual</label>
+                    </div>
+                    <button type="submit" class="btn-primary">Guardar Gasto</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="finanzas" class="tab-content">
+            <div class="card">
+                <h3>Resumen del Mes</h3>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <p>Total Gastado</p>
+                        <h4 id="total-mes">$0</h4>
+                    </div>
+                    <div class="stat-box">
+                        <p>Categoría Mayor</p>
+                        <h4 id="cat-mayor">-</h4>
+                    </div>
+                </div>
+                
+                <div class="charts-container">
+                    <div class="chart-wrapper">
+                        <canvas id="graficoTorta"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="prestamos" class="tab-content">
+            <div class="card">
+                <h3>Registrar Préstamo</h3>
+                <form id="form-prestamos">
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select id="tipo-prestamo">
+                            <option value="di">Yo presté plata</option>
+                            <option value="recibi">Me prestaron plata</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>¿A quién / De quién?</label>
+                        <input type="text" id="persona-prestamo" required placeholder="Nombre de la persona">
+                    </div>
+                    <div class="form-group">
+                        <label>Monto ($)</label>
+                        <input type="number" id="monto-prestamo" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha</label>
+                        <input type="date" id="fecha-prestamo" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Registrar</button>
+                </form>
+            </div>
+        </section>
+
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+    
+</body>
+</html>
