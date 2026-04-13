@@ -6,6 +6,7 @@ let miGrafico = null;
 let todosLosGastos = [];
 let todosLosPrestamos = [];
 let todasLasCategorias = [];
+let todasLasTareas = [];
 
 function openTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -18,7 +19,7 @@ function mostrarToast(mensaje, tipo = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${tipo}`;
-    toast.innerHTML = tipo === 'success' ? `✅ ${mensaje}` : `❌ ${mensaje}`;
+    toast.innerHTML = tipo === 'success' ? `Exito: ${mensaje}` : `Error: ${mensaje}`;
     container.appendChild(toast);
     setTimeout(() => { toast.classList.add('fadeOut'); toast.addEventListener('animationend', () => toast.remove()); }, 3000);
 }
@@ -67,9 +68,16 @@ function pedirTexto(mensaje, valorInicial = '') {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const hoy = new Date().toISOString().split('T')[0];
-    document.getElementById('fecha-gasto').value = hoy;
-    document.getElementById('fecha-prestamo').value = hoy;
+    const hoy = new Date();
+    const fechaTexto = hoy.toISOString().split('T')[0];
+    
+    document.getElementById('fecha-gasto').value = fechaTexto;
+    document.getElementById('fecha-prestamo').value = fechaTexto;
+    document.getElementById('fecha-tarea').value = fechaTexto;
+    
+    document.getElementById('resumen-mes').value = hoy.getMonth();
+    document.getElementById('resumen-anio').value = hoy.getFullYear();
+
     cargarDatos();
 });
 
@@ -77,20 +85,21 @@ async function cargarDatos() {
     const { data: gastos } = await clienteSupabase.from('gastos').select('*').order('fecha', { ascending: false });
     const { data: prestamos } = await clienteSupabase.from('prestamos').select('*').order('fecha', { ascending: false });
     const { data: categorias } = await clienteSupabase.from('categorias').select('*').order('nombre');
+    const { data: tareas } = await clienteSupabase.from('tareas').select('*').order('fecha_limite', { ascending: true });
 
     todosLosGastos = gastos || [];
     todosLosPrestamos = prestamos || [];
     todasLasCategorias = categorias || [];
+    todasLasTareas = tareas || [];
 
     actualizarResumen();
     actualizarTablaHistorial();
     actualizarFiltrosYSelects();
     renderizarTarjetasPrestamos();
+    renderizarTareas();
     actualizarListaPersonas();
 }
 
-// --- MAGIA DE GASTOS FIJOS ---
-// Esta función agarra solo los fijos más nuevos hasta el mes que estemos mirando
 function obtenerFijosActivos(mesObj, anioObj) {
     let fijos = {};
     todosLosGastos.forEach(g => {
@@ -100,7 +109,6 @@ function obtenerFijosActivos(mesObj, anioObj) {
 
         if (g.es_fijo && (anioGasto < anioObj || (anioGasto === anioObj && mesGasto <= mesObj))) {
             const key = `${g.categoria}-${(g.detalle || '').toLowerCase().trim()}`;
-            // Pisamos el anterior si encontramos uno más nuevo
             if (!fijos[key] || new Date(g.fecha) > new Date(fijos[key].fecha)) {
                 fijos[key] = g;
             }
@@ -109,7 +117,6 @@ function obtenerFijosActivos(mesObj, anioObj) {
     return fijos;
 }
 
-// --- GESTIÓN DE GASTOS ---
 function actualizarTablaHistorial() {
     const tbody = document.getElementById('tabla-body');
     const filtroCat = document.getElementById('filtro-categoria').value;
@@ -119,10 +126,10 @@ function actualizarTablaHistorial() {
     let filtrados = [];
 
     if (filtroMes === 'todos') {
-        filtrados = todosLosGastos; // Sin proyecciones, muestra crudo
+        filtrados = todosLosGastos; 
     } else {
         const mesTarget = parseInt(filtroMes);
-        const anioActual = new Date().getFullYear();
+        const anioActual = new Date().getFullYear(); 
         
         const fijosVigentes = obtenerFijosActivos(mesTarget, anioActual);
         const realesDelMes = todosLosGastos.filter(g => {
@@ -145,14 +152,60 @@ function actualizarTablaHistorial() {
                 <td>${g.categoria.replace('_', ' ')} ${etiquetaFijo}</td>
                 <td style="color: #64748B; font-size: 0.85rem;">${g.detalle || '-'}</td>
                 <td style="font-weight:600">$${g.monto.toLocaleString('es-AR')}</td>
-                <td><button class="btn-borrar" onclick="borrarRegistro('gastos', '${g.id}')" title="Borrar">×</button></td>
+                <td>
+                    <button class="btn-texto" onclick="abrirModalEditarGasto(${g.id})">Editar</button>
+                    <button class="btn-texto-peligro" onclick="borrarRegistro('gastos', '${g.id}')">Borrar</button>
+                </td>
             </tr>
         `;
     });
 }
 
+function abrirModalEditarGasto(id) {
+    const gasto = todosLosGastos.find(g => g.id === id);
+    if (!gasto) return;
+
+    document.getElementById('edit-id-gasto').value = gasto.id;
+    document.getElementById('edit-monto-gasto').value = gasto.monto;
+    document.getElementById('edit-detalle-gasto').value = gasto.detalle || '';
+    document.getElementById('edit-fecha-gasto').value = gasto.fecha;
+    document.getElementById('edit-gasto-fijo').checked = gasto.es_fijo;
+
+    const selectCat = document.getElementById('edit-categoria-gasto');
+    selectCat.innerHTML = document.getElementById('categoria-gasto').innerHTML;
+    selectCat.value = gasto.categoria;
+
+    document.getElementById('modal-editar-gasto').classList.remove('hidden');
+}
+
+function cerrarModalEditarGasto() {
+    document.getElementById('modal-editar-gasto').classList.add('hidden');
+}
+
+document.getElementById('form-editar-gasto').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = parseInt(document.getElementById('edit-id-gasto').value, 10);
+    const datosActualizados = {
+        monto: parseFloat(document.getElementById('edit-monto-gasto').value),
+        categoria: document.getElementById('edit-categoria-gasto').value,
+        detalle: document.getElementById('edit-detalle-gasto').value,
+        fecha: document.getElementById('edit-fecha-gasto').value,
+        es_fijo: document.getElementById('edit-gasto-fijo').checked
+    };
+
+    const { error } = await clienteSupabase.from('gastos').update(datosActualizados).eq('id', id);
+    
+    if (error) {
+        mostrarToast('Error al actualizar el gasto', 'error');
+    } else {
+        mostrarToast('Gasto actualizado correctamente');
+        cerrarModalEditarGasto();
+        cargarDatos();
+    }
+});
+
 async function borrarRegistro(tabla, id) {
-    const confirmado = await preguntarConfirmacion('¿Seguro que querés borrar este registro de forma permanente?');
+    const confirmado = await preguntarConfirmacion('Seguro que quieres borrar este registro de forma permanente?');
     if(!confirmado) return;
     
     const idNum = parseInt(id, 10);
@@ -166,7 +219,6 @@ async function borrarRegistro(tabla, id) {
     }
 }
 
-// --- GESTIÓN DE CATEGORÍAS ---
 function actualizarFiltrosYSelects() {
     const selectGasto = document.getElementById('categoria-gasto');
     const selectFiltro = document.getElementById('filtro-categoria');
@@ -187,13 +239,13 @@ function actualizarFiltrosYSelects() {
 }
 
 document.getElementById('btn-nueva-categoria').addEventListener('click', async () => {
-    const nueva = await pedirTexto('Ingresá el nombre de la nueva categoría:');
+    const nueva = await pedirTexto('Ingresa el nombre de la nueva categoria:');
     if (nueva) {
         const val = nueva.trim().toLowerCase().replace(/ /g, '_');
         await clienteSupabase.from('categorias').insert([{ nombre: val }]);
         await cargarDatos();
         document.getElementById('categoria-gasto').value = val;
-        mostrarToast('¡Categoría creada y lista!');
+        mostrarToast('Categoria creada y lista');
     }
 });
 
@@ -207,8 +259,8 @@ document.getElementById('btn-gestionar-categorias').addEventListener('click', ()
         <div class="item-cat">
             <span>${cat.replace('_', ' ')}</span>
             <div class="item-cat-acciones">
-                <button onclick="editarCategoria('${cat}')" title="Editar">✏️</button>
-                <button onclick="borrarCategoria('${cat}')" title="Borrar" style="color: var(--danger)">🗑️</button>
+                <button class="btn-texto" onclick="editarCategoria('${cat}')">Editar</button>
+                <button class="btn-texto-peligro" onclick="borrarCategoria('${cat}')">Borrar</button>
             </div>
         </div>
     `}).join('');
@@ -222,44 +274,42 @@ function cerrarModalCategorias() {
 
 async function editarCategoria(catVieja) {
     cerrarModalCategorias(); 
-    const nueva = await pedirTexto(`Escribí el nuevo nombre para "${catVieja.replace('_', ' ')}":`);
+    const nueva = await pedirTexto(`Escribi el nuevo nombre para ${catVieja.replace('_', ' ')}:`);
     
     if (nueva) {
         const catNuevaFormateada = nueva.trim().toLowerCase().replace(/ /g, '_');
         await clienteSupabase.from('gastos').update({ categoria: catNuevaFormateada }).eq('categoria', catVieja);
         await clienteSupabase.from('categorias').update({ nombre: catNuevaFormateada }).eq('nombre', catVieja);
-        mostrarToast('Categoría actualizada con éxito');
+        mostrarToast('Categoria actualizada con exito');
         cargarDatos();
     }
 }
 
 async function borrarCategoria(catVieja) {
     cerrarModalCategorias();
-    const confirmado = await preguntarConfirmacion(`¿Seguro que querés borrar "${catVieja.replace('_', ' ')}"?\nLa plata no se pierde, pasará a "Otros".`);
+    const confirmado = await preguntarConfirmacion(`Seguro que quieres borrar la categoria ${catVieja.replace('_', ' ')}?\nLa plata pasara a Otros.`);
     
     if(confirmado) {
         await clienteSupabase.from('gastos').update({ categoria: 'otros' }).eq('categoria', catVieja);
         await clienteSupabase.from('categorias').delete().eq('nombre', catVieja);
-        mostrarToast('Categoría borrada');
+        mostrarToast('Categoria borrada');
         cargarDatos();
     }
 }
 
-// --- ESTADÍSTICAS DEL RESUMEN ---
 function actualizarResumen() {
-    const fechaActual = new Date();
-    const mesActual = fechaActual.getMonth();
-    const anioActual = fechaActual.getFullYear();
-    const diasDelMes = new Date(anioActual, mesActual + 1, 0).getDate(); 
+    const mesSeleccionado = parseInt(document.getElementById('resumen-mes').value);
+    const anioSeleccionado = parseInt(document.getElementById('resumen-anio').value);
+    const diasDelMes = new Date(anioSeleccionado, mesSeleccionado + 1, 0).getDate(); 
     
     let totalMes = 0;
     let totalFijos = 0;
     const cats = {};
 
-    const fijosVigentes = obtenerFijosActivos(mesActual, anioActual);
+    const fijosVigentes = obtenerFijosActivos(mesSeleccionado, anioSeleccionado);
     const realesDelMes = todosLosGastos.filter(g => {
         const d = new Date(g.fecha + 'T00:00:00');
-        return d.getMonth() === mesActual && d.getFullYear() === anioActual && !g.es_fijo;
+        return d.getMonth() === mesSeleccionado && d.getFullYear() === anioSeleccionado && !g.es_fijo;
     });
 
     const gastosDelMes = [...realesDelMes, ...Object.values(fijosVigentes)];
@@ -270,7 +320,13 @@ function actualizarResumen() {
         if (g.es_fijo) totalFijos += g.monto;
     });
 
-    const promedioDiario = fechaActual.getDate() > 0 ? totalMes / fechaActual.getDate() : 0;
+    let diasParaPromedio = diasDelMes;
+    const fechaHoy = new Date();
+    if (mesSeleccionado === fechaHoy.getMonth() && anioSeleccionado === fechaHoy.getFullYear()) {
+        diasParaPromedio = fechaHoy.getDate() > 0 ? fechaHoy.getDate() : 1;
+    }
+
+    const promedioDiario = totalMes / diasParaPromedio;
     const proyeccionFinal = promedioDiario * diasDelMes;
     
     let catMayor = '-'; let maxGasto = 0;
@@ -299,8 +355,9 @@ function actualizarResumen() {
 
 document.getElementById('filtro-categoria').addEventListener('change', actualizarTablaHistorial);
 document.getElementById('filtro-mes').addEventListener('change', actualizarTablaHistorial);
+document.getElementById('resumen-mes').addEventListener('change', actualizarResumen);
+document.getElementById('resumen-anio').addEventListener('change', actualizarResumen);
 
-// --- FORMULARIOS ---
 document.getElementById('form-gastos').addEventListener('submit', async (e) => {
     e.preventDefault();
     const g = {
@@ -313,7 +370,7 @@ document.getElementById('form-gastos').addEventListener('submit', async (e) => {
     const { error } = await clienteSupabase.from('gastos').insert([g]);
     if(error) mostrarToast('Error al guardar', 'error');
     else {
-        mostrarToast('¡Gasto registrado!');
+        mostrarToast('Gasto registrado correctamente');
         document.getElementById('form-gastos').reset();
         document.getElementById('fecha-gasto').value = new Date().toISOString().split('T')[0];
         cargarDatos();
@@ -330,9 +387,9 @@ document.getElementById('form-prestamos').addEventListener('submit', async (e) =
         fecha: document.getElementById('fecha-prestamo').value
     };
     const { error } = await clienteSupabase.from('prestamos').insert([p]);
-    if(error) mostrarToast('Error al guardar el préstamo', 'error');
+    if(error) mostrarToast('Error al guardar el prestamo', 'error');
     else {
-        mostrarToast('¡Préstamo registrado!');
+        mostrarToast('Prestamo registrado correctamente');
         document.getElementById('form-prestamos').reset();
         document.getElementById('fecha-prestamo').value = new Date().toISOString().split('T')[0];
         cargarDatos();
@@ -352,12 +409,12 @@ function renderizarTarjetasPrestamos() {
     for (const [nombre, info] of Object.entries(personas)) {
         let htmlMovs = info.movimientos.map(m => {
             const fechaTxt = m.fecha.split('-').reverse().join('/');
-            const tipoTxt = m.tipo === 'di' ? '↗️ Le presté' : '↙️ Me prestó';
+            const tipoTxt = m.tipo === 'di' ? 'Preste' : 'Me presto';
             const detalleTxt = m.detalle ? ` - <i>${m.detalle}</i>` : '';
             return `
             <div class="movimiento-item">
                 <div class="movimiento-info"><span style="font-weight:600">${tipoTxt}</span><span class="movimiento-fecha">${fechaTxt}${detalleTxt}</span></div>
-                <span>$${m.monto.toLocaleString('es-AR')} <button type="button" class="btn-borrar" onclick="borrarRegistro('prestamos', '${m.id}')">×</button></span>
+                <span>$${m.monto.toLocaleString('es-AR')} <button type="button" class="btn-texto-peligro" onclick="borrarRegistro('prestamos', '${m.id}')">Borrar</button></span>
             </div>`
         }).join('');
 
@@ -371,4 +428,52 @@ function renderizarTarjetasPrestamos() {
 
 function actualizarListaPersonas() {
     document.getElementById('lista-personas').innerHTML = [...new Set(todosLosPrestamos.map(p => p.persona))].map(n => `<option value="${n}">`).join('');
+}
+
+document.getElementById('form-tareas').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const t = {
+        titulo: document.getElementById('titulo-tarea').value,
+        descripcion: document.getElementById('desc-tarea').value,
+        fecha_limite: document.getElementById('fecha-tarea').value,
+        completada: false
+    };
+    const { error } = await clienteSupabase.from('tareas').insert([t]);
+    if(error) mostrarToast('Error al guardar la tarea', 'error');
+    else {
+        mostrarToast('Tarea registrada correctamente');
+        document.getElementById('form-tareas').reset();
+        document.getElementById('fecha-tarea').value = new Date().toISOString().split('T')[0];
+        cargarDatos();
+    }
+});
+
+function renderizarTareas() {
+    const contenedor = document.getElementById('contenedor-tareas');
+    contenedor.innerHTML = '';
+    
+    todasLasTareas.forEach(t => {
+        const fechaTxt = t.fecha_limite ? t.fecha_limite.split('-').reverse().join('/') : 'Sin limite';
+        const claseCompletada = t.completada ? 'completada' : '';
+        const textoBotonEstado = t.completada ? 'Desmarcar' : 'Completar';
+        
+        contenedor.innerHTML += `
+            <div class="tarjeta-tarea ${claseCompletada}">
+                <h4>${t.titulo}</h4>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">${t.descripcion || 'Sin detalle'}</p>
+                <p style="font-size: 0.8rem; font-weight: bold;">Limite: ${fechaTxt}</p>
+                <div class="tarea-acciones">
+                    <button class="btn-texto" onclick="cambiarEstadoTarea(${t.id}, ${!t.completada})">${textoBotonEstado}</button>
+                    <button class="btn-texto-peligro" onclick="borrarRegistro('tareas', '${t.id}')">Borrar</button>
+                </div>
+            </div>
+        `;
+    });
+}
+
+async function cambiarEstadoTarea(id, nuevoEstado) {
+    const { error } = await clienteSupabase.from('tareas').update({ completada: nuevoEstado }).eq('id', id);
+    if (!error) {
+        cargarDatos();
+    }
 }
