@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Gastos</title>
+    <title>Gestion de Gastos</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -15,7 +15,8 @@
             <button class="nav-btn active" onclick="openTab('gastos')">Gastos</button>
             <button class="nav-btn" onclick="openTab('historial')">Historial</button>
             <button class="nav-btn" onclick="openTab('finanzas')">Resumen</button>
-            <button class="nav-btn" onclick="openTab('prestamos')">Préstamos</button>
+            <button class="nav-btn" onclick="openTab('prestamos')">Prestamos</button>
+            <button class="nav-btn" onclick="openTab('tareas')">Tareas</button>
         </div>
     </nav>
 
@@ -30,13 +31,13 @@
                         <input type="number" id="monto-gasto" required placeholder="Ej: 15000">
                     </div>
                     <div class="form-group">
-                        <label>Categoría</label>
+                        <label>Categoria</label>
                         <div class="input-con-boton">
                             <select id="categoria-gasto" required>
                                 <option value="">Seleccionar...</option>
-                                </select>
-                            <button type="button" class="btn-icono" id="btn-nueva-categoria" title="Nueva categoría">+</button>
-                            <button type="button" class="btn-icono" id="btn-gestionar-categorias" title="Gestionar categorías">⚙️</button>
+                            </select>
+                            <button type="button" class="btn-secundario" style="width: auto; padding: 0.8rem;" id="btn-nueva-categoria">+</button>
+                            <button type="button" class="btn-secundario" style="width: auto; padding: 0.8rem;" id="btn-gestionar-categorias">Ajustes</button>
                         </div>
                     </div>
                     <div class="form-group">
@@ -61,7 +62,7 @@
                 <h3>Historial de Gastos</h3>
                 <div class="filtros-grid">
                     <div class="form-group">
-                        <label>Categoría:</label>
+                        <label>Categoria:</label>
                         <select id="filtro-categoria"><option value="todas">Todas</option></select>
                     </div>
                     <div class="form-group">
@@ -82,10 +83,10 @@
                         <thead>
                             <tr>
                                 <th>Fecha</th>
-                                <th>Categoría</th>
+                                <th>Categoria</th>
                                 <th>Detalle</th>
                                 <th>Monto</th>
-                                <th></th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-body"></tbody>
@@ -96,13 +97,30 @@
 
         <section id="finanzas" class="tab-content">
             <div class="card">
-                <h3>Resumen del Mes Actual</h3>
+                <h3>Resumen Mensual</h3>
+                <div class="filtros-grid" style="margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label>Mes a consultar:</label>
+                        <select id="resumen-mes">
+                            <option value="0">Enero</option><option value="1">Febrero</option>
+                            <option value="2">Marzo</option><option value="3">Abril</option>
+                            <option value="4">Mayo</option><option value="5">Junio</option>
+                            <option value="6">Julio</option><option value="7">Agosto</option>
+                            <option value="8">Septiembre</option><option value="9">Octubre</option>
+                            <option value="10">Noviembre</option><option value="11">Diciembre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Año:</label>
+                        <input type="number" id="resumen-anio" value="2026">
+                    </div>
+                </div>
                 <div class="stats-grid">
                     <div class="stat-box main-stat"><p>Total Gastado</p><h4 id="total-mes">$0</h4></div>
                     <div class="stat-box"><p>Fijos Mensuales</p><h4 id="total-fijo">$0</h4></div>
                     <div class="stat-box"><p>Promedio Diario</p><h4 id="promedio-diario">$0</h4></div>
-                    <div class="stat-box"><p>Proyección Fin de Mes</p><h4 id="proyeccion-mes">$0</h4></div>
-                    <div class="stat-box" style="grid-column: span 2;"><p>Categoría Mayor</p><h4 id="cat-mayor">-</h4></div>
+                    <div class="stat-box"><p>Proyeccion Fin de Mes</p><h4 id="proyeccion-mes">$0</h4></div>
+                    <div class="stat-box" style="grid-column: span 2;"><p>Categoria Mayor</p><h4 id="cat-mayor">-</h4></div>
                 </div>
                 <div class="charts-container">
                     <div class="chart-wrapper"><canvas id="graficoTorta"></canvas></div>
@@ -112,22 +130,22 @@
 
         <section id="prestamos" class="tab-content">
             <div class="card">
-                <h3>Registrar Préstamo</h3>
+                <h3>Registrar Prestamo</h3>
                 <form id="form-prestamos">
                     <div class="form-group">
                         <label>Tipo</label>
                         <select id="tipo-prestamo">
-                            <option value="di">Yo presté plata</option>
+                            <option value="di">Yo preste plata</option>
                             <option value="recibi">Me prestaron plata</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>¿A quién / De quién?</label>
+                        <label>A quien / De quien?</label>
                         <input type="text" id="persona-prestamo" list="lista-personas" required placeholder="Nombre de la persona">
                         <datalist id="lista-personas"></datalist>
                     </div>
                     <div class="form-group">
-                        <label>Detalle del préstamo</label>
+                        <label>Detalle del prestamo</label>
                         <input type="text" id="detalle-prestamo-input" placeholder="Ej: Para el alquiler">
                     </div>
                     <div class="form-group">
@@ -144,23 +162,78 @@
             <div id="contenedor-prestamos" class="prestamos-grid"></div>
         </section>
 
+        <section id="tareas" class="tab-content">
+            <div class="card">
+                <h3>Nueva Tarea</h3>
+                <form id="form-tareas">
+                    <div class="form-group">
+                        <label>Titulo</label>
+                        <input type="text" id="titulo-tarea" required placeholder="Ej: Dar de baja servicio">
+                    </div>
+                    <div class="form-group">
+                        <label>Descripcion (Opcional)</label>
+                        <input type="text" id="desc-tarea" placeholder="Ej: Llamar al numero de atencion">
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha limite</label>
+                        <input type="date" id="fecha-tarea" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Guardar Tarea</button>
+                </form>
+            </div>
+            <div id="contenedor-tareas" class="tareas-grid"></div>
+        </section>
+
     </main>
 
     <div id="modal-categorias" class="modal hidden">
         <div class="modal-content card">
-            <h3>Gestionar Categorías</h3>
-            <p style="font-size: 0.85rem; color: #64748B; margin-bottom: 1rem;">Borrar una categoría moverá esos gastos a "Otros".</p>
+            <h3>Gestionar Categorias</h3>
+            <p style="font-size: 0.85rem; color: #64748B; margin-bottom: 1rem;">Borrar una categoria movera esos gastos a Otros.</p>
             <div id="lista-gestionar-categorias" class="lista-cat"></div>
             <button type="button" class="btn-secundario" onclick="cerrarModalCategorias()" style="margin-top: 1rem;">Cerrar</button>
         </div>
     </div>
 
+    <div id="modal-editar-gasto" class="modal hidden">
+        <div class="modal-content card">
+            <h3>Editar Gasto</h3>
+            <form id="form-editar-gasto">
+                <input type="hidden" id="edit-id-gasto">
+                <div class="form-group">
+                    <label>Monto ($)</label>
+                    <input type="number" id="edit-monto-gasto" required>
+                </div>
+                <div class="form-group">
+                    <label>Categoria</label>
+                    <select id="edit-categoria-gasto" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Detalle</label>
+                    <input type="text" id="edit-detalle-gasto">
+                </div>
+                <div class="form-group">
+                    <label>Fecha</label>
+                    <input type="date" id="edit-fecha-gasto" required>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="edit-gasto-fijo">
+                    <label for="edit-gasto-fijo">Es gasto fijo mensual</label>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 1rem;">
+                    <button type="button" class="btn-secundario" onclick="cerrarModalEditarGasto()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="modal-confirmar" class="modal hidden">
         <div class="modal-content modal-pequeno card">
-            <h4 id="texto-confirmar" style="margin-bottom: 1.5rem; text-align: center;">¿Estás seguro?</h4>
+            <h4 id="texto-confirmar" style="margin-bottom: 1.5rem; text-align: center;">Estas seguro?</h4>
             <div style="display: flex; gap: 10px;">
                 <button id="btn-conf-cancelar" class="btn-secundario">Cancelar</button>
-                <button id="btn-conf-aceptar" class="btn-primary" style="background-color: var(--danger);">Sí, Borrar</button>
+                <button id="btn-conf-aceptar" class="btn-primary" style="background-color: var(--danger);">Si, Borrar</button>
             </div>
         </div>
     </div>
